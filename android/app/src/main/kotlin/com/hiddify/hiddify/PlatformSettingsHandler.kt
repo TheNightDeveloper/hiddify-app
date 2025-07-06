@@ -142,15 +142,17 @@ class PlatformSettingsHandler : FlutterPlugin, MethodChannel.MethodCallHandler, 
                             }
                         val list = mutableListOf<AppItem>()
                         installedPackages.forEach {
-                            if (it.packageName != Application.application.packageName &&
+                            val appInfo = it.applicationInfo
+                            if (appInfo != null &&
+                                it.packageName != Application.application.packageName &&
                                 (it.requestedPermissions?.contains(Manifest.permission.INTERNET) == true
                                         || it.packageName == "android")
                             ) {
                                 list.add(
                                     AppItem(
                                         it.packageName,
-                                        it.applicationInfo.loadLabel(packageManager).toString(),
-                                        it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 1
+                                        appInfo.loadLabel(packageManager).toString(),
+                                        appInfo.flags and ApplicationInfo.FLAG_SYSTEM == 1
                                     )
                                 )
                             }

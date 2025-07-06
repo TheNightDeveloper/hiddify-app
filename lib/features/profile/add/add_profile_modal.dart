@@ -19,11 +19,7 @@ import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class AddProfileModal extends HookConsumerWidget {
-  const AddProfileModal({
-    super.key,
-    this.url,
-    this.scrollController,
-  });
+  const AddProfileModal({super.key, this.url, this.scrollController});
   static const warpConsentGiven = "warp_consent_given";
   final String? url;
   final ScrollController? scrollController;
@@ -33,18 +29,13 @@ class AddProfileModal extends HookConsumerWidget {
     final t = ref.watch(translationsProvider);
     final addProfileState = ref.watch(addProfileProvider);
 
-    ref.listen(
-      addProfileProvider,
-      (previous, next) {
-        if (next case AsyncData(value: final _?)) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) {
-              if (context.mounted && context.canPop()) context.pop();
-            },
-          );
-        }
-      },
-    );
+    ref.listen(addProfileProvider, (previous, next) {
+      if (next case AsyncData(value: final _?)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted && context.canPop()) context.pop();
+        });
+      }
+    });
 
     useMemoized(() async {
       await Future.delayed(const Duration(milliseconds: 200));
@@ -75,22 +66,15 @@ class AddProfileModal extends HookConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        t.profile.add.addingProfileMsg,
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text(t.profile.add.addingProfileMsg, style: theme.textTheme.bodySmall),
                       const Gap(8),
-                      const LinearProgressIndicator(
-                        backgroundColor: Colors.transparent,
-                      ),
+                      const LinearProgressIndicator(backgroundColor: Colors.transparent),
                       const Gap(8),
                       TextButton(
                         onPressed: () {
                           ref.invalidate(addProfileProvider);
                         },
-                        child: Text(
-                          MaterialLocalizations.of(context).cancelButtonLabel,
-                        ),
+                        child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
                       ),
                     ],
                   ),
@@ -121,11 +105,11 @@ class AddProfileModal extends HookConsumerWidget {
                             icon: FluentIcons.qr_code_24_regular,
                             size: buttonWidth,
                             onTap: () async {
-                              final cr = await QRCodeScannerScreen().open(context);
+                              // final cr = await QRCodeScannerScreen().open(context);
 
-                              if (cr == null) return;
-                              if (addProfileState.isLoading) return;
-                              ref.read(addProfileProvider.notifier).add(cr);
+                              // if (cr == null) return;
+                              // if (addProfileState.isLoading) return;
+                              // ref.read(addProfileProvider.notifier).add(cr);
                             },
                           )
                         else
@@ -143,10 +127,7 @@ class AddProfileModal extends HookConsumerWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: buttonsPadding,
-                      vertical: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: buttonsPadding, vertical: 16),
                     child: Column(
                       children: [
                         Semantics(
@@ -168,17 +149,9 @@ class AddProfileModal extends HookConsumerWidget {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      FluentIcons.add_24_regular,
-                                      color: theme.colorScheme.primary,
-                                    ),
+                                    Icon(FluentIcons.add_24_regular, color: theme.colorScheme.primary),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      t.profile.add.addWarp,
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
+                                    Text(t.profile.add.addWarp, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
                                   ],
                                 ),
                               ),
@@ -207,17 +180,9 @@ class AddProfileModal extends HookConsumerWidget {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        FluentIcons.add_24_regular,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                      Icon(FluentIcons.add_24_regular, color: theme.colorScheme.primary),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        t.profile.add.manually,
-                                        style: theme.textTheme.labelLarge?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ),
+                                      Text(t.profile.add.manually, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
                                     ],
                                   ),
                                 ),
@@ -251,10 +216,7 @@ class AddProfileModal extends HookConsumerWidget {
     final notification = ref.read(inAppNotificationControllerProvider);
 
     if (!consent) {
-      final agreed = await showDialog<bool>(
-        context: context,
-        builder: (context) => const WarpLicenseAgreementModal(),
-      );
+      final agreed = await showDialog<bool>(context: context, builder: (context) => const WarpLicenseAgreementModal());
 
       if (agreed != true) return;
     }
@@ -283,13 +245,7 @@ class AddProfileModal extends HookConsumerWidget {
 }
 
 class _Button extends StatelessWidget {
-  const _Button({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.size,
-    required this.onTap,
-  });
+  const _Button({super.key, required this.label, required this.icon, required this.size, required this.onTap});
 
   final String label;
   final IconData icon;
@@ -318,11 +274,7 @@ class _Button extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  icon,
-                  size: size / 3,
-                  color: color,
-                ),
+                Icon(icon, size: size / 3, color: color),
                 const Gap(16),
                 Flexible(
                   child: Text(

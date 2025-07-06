@@ -104,6 +104,7 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
     }
 
     override fun onServiceWriteLog(message: String?) {
+        if (message == null) return
         if (logList.size > 300) {
             logList.removeFirst()
         }

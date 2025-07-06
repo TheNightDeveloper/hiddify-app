@@ -39,23 +39,26 @@ class AnalyticsController extends _$AnalyticsController with AppLogger {
       final sentryLogger = SentryLoggyIntegration();
       LoggerController.instance.addPrinter("analytics", sentryLogger);
 
-      await SentryFlutter.init(
-        (options) {
-          options.dsn = dsn;
-          options.environment = env.name;
-          options.dist = appInfo.release.name;
-          options.debug = kDebugMode;
-          options.enableNativeCrashHandling = true;
-          options.enableNdkScopeSync = true;
-          // options.attachScreenshot = true;
-          options.serverName = "";
-          options.attachThreads = true;
-          options.tracesSampleRate = 0.20;
-          options.enableUserInteractionTracing = true;
-          options.addIntegration(sentryLogger);
-          options.beforeSend = sentryBeforeSend;
-        },
-      );
+      await SentryFlutter.init((options) {
+        options.dsn = dsn;
+        options.environment = env.name;
+        options.dist = appInfo.release.name;
+        options.debug = kDebugMode;
+        options.enableNativeCrashHandling = true;
+        options.enableNdkScopeSync = true;
+        // options.attachScreenshot = true;
+        options.serverName = "";
+        options.attachThreads = true;
+        options.tracesSampleRate = 0.20;
+        options.enableUserInteractionTracing = true;
+        options.addIntegration(sentryLogger);
+        options.beforeSend = (event, hint) {
+          return event.copyWith(
+            user: SentryUser(email: "", username: "", ipAddress: "0.0.0.0"),
+          );
+        };
+        // options.beforeSend = sentryBeforeSend;
+      });
 
       state = const AsyncData(true);
     }

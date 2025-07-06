@@ -19,64 +19,57 @@ const _debugUpgrader = true;
 
 @riverpod
 Upgrader upgrader(UpgraderRef ref) => Upgrader(
-      appcastConfig: AppcastConfiguration(url: Constants.appCastUrl),
-      debugLogging: _debugUpgrader && kDebugMode,
-      durationUntilAlertAgain: const Duration(hours: 12),
-      messages: UpgraderMessages(
-        code: ref.watch(localePreferencesProvider).languageCode,
-      ),
-    );
+  // appcastConfig: AppcastConfiguration(url: Constants.appCastUrl),
+  storeController: UpgraderStoreController(onAndroid: () => UpgraderAppcastStore(appcastURL: Constants.appCastUrl)),
+  debugLogging: _debugUpgrader && kDebugMode,
+  durationUntilAlertAgain: const Duration(hours: 12),
+  messages: UpgraderMessages(code: ref.watch(localePreferencesProvider).languageCode),
+);
 
 @Riverpod(keepAlive: true)
 class AppUpdateNotifier extends _$AppUpdateNotifier with AppLogger {
   @override
   AppUpdateState build() => const AppUpdateState.initial();
 
-  PreferencesEntry<String?, dynamic> get _ignoreReleasePref => PreferencesEntry(
-        preferences: ref.read(sharedPreferencesProvider).requireValue,
-        key: 'ignored_release_version',
-        defaultValue: null,
-      );
+  PreferencesEntry<String?, dynamic> get _ignoreReleasePref => PreferencesEntry(preferences: ref.read(sharedPreferencesProvider).requireValue, key: 'ignored_release_version', defaultValue: null);
 
   Future<AppUpdateState> check() async {
     loggy.debug("checking for update");
     state = const AppUpdateState.checking();
     final appInfo = ref.watch(appInfoProvider).requireValue;
     if (!appInfo.release.allowCustomUpdateChecker) {
-      loggy.debug(
-        "custom update checkers are not allowed for [${appInfo.release.name}] release",
-      );
+      loggy.debug("custom update checkers are not allowed for [${appInfo.release.name}] release");
       return state = const AppUpdateState.disabled();
     }
-    return ref.watch(appUpdateRepositoryProvider).getLatestVersion().match(
-      (err) {
-        loggy.warning("failed to get latest version", err);
-        return state = AppUpdateState.error(err);
-      },
-      (remote) {
-        try {
-          final latestVersion = Version.parse(remote.version);
-          final currentVersion = Version.parse(appInfo.version);
-          if (latestVersion > currentVersion) {
-            if (remote.version == _ignoreReleasePref.read()) {
-              loggy.debug("ignored release [${remote.version}]");
-              return state = AppUpdateStateIgnored(remote);
+    return ref
+        .watch(appUpdateRepositoryProvider)
+        .getLatestVersion()
+        .match(
+          (err) {
+            loggy.warning("failed to get latest version", err);
+            return state = AppUpdateState.error(err);
+          },
+          (remote) {
+            try {
+              final latestVersion = Version.parse(remote.version);
+              final currentVersion = Version.parse(appInfo.version);
+              if (latestVersion > currentVersion) {
+                if (remote.version == _ignoreReleasePref.read()) {
+                  loggy.debug("ignored release [${remote.version}]");
+                  return state = AppUpdateStateIgnored(remote);
+                }
+                loggy.debug("new version available: $remote");
+                return state = AppUpdateState.available(remote);
+              }
+              loggy.info("already using latest version[$currentVersion], remote: [${remote.version}]");
+              return state = const AppUpdateState.notAvailable();
+            } catch (error, stackTrace) {
+              loggy.warning("error parsing versions", error, stackTrace);
+              return state = AppUpdateState.error(AppUpdateFailure.unexpected(error, stackTrace));
             }
-            loggy.debug("new version available: $remote");
-            return state = AppUpdateState.available(remote);
-          }
-          loggy.info(
-            "already using latest version[$currentVersion], remote: [${remote.version}]",
-          );
-          return state = const AppUpdateState.notAvailable();
-        } catch (error, stackTrace) {
-          loggy.warning("error parsing versions", error, stackTrace);
-          return state = AppUpdateState.error(
-            AppUpdateFailure.unexpected(error, stackTrace),
-          );
-        }
-      },
-    ).run();
+          },
+        )
+        .run();
   }
 
   Future<void> ignoreRelease(RemoteVersionEntity version) async {

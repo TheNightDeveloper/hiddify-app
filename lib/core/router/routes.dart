@@ -27,54 +27,22 @@ GlobalKey<NavigatorState>? _dynamicRootKey = useMobileRouter ? rootNavigatorKey 
       path: "/",
       name: HomeRoute.name,
       routes: [
-        TypedGoRoute<AddProfileRoute>(
-          path: "add",
-          name: AddProfileRoute.name,
-        ),
-        TypedGoRoute<ProfilesOverviewRoute>(
-          path: "profiles",
-          name: ProfilesOverviewRoute.name,
-        ),
-        TypedGoRoute<NewProfileRoute>(
-          path: "profiles/new",
-          name: NewProfileRoute.name,
-        ),
-        TypedGoRoute<ProfileDetailsRoute>(
-          path: "profiles/:id",
-          name: ProfileDetailsRoute.name,
-        ),
-        TypedGoRoute<ConfigOptionsRoute>(
-          path: "config-options",
-          name: ConfigOptionsRoute.name,
-        ),
-        TypedGoRoute<QuickSettingsRoute>(
-          path: "quick-settings",
-          name: QuickSettingsRoute.name,
-        ),
+        TypedGoRoute<AddProfileRoute>(path: "add", name: AddProfileRoute.name),
+        TypedGoRoute<ProfilesOverviewRoute>(path: "profiles", name: ProfilesOverviewRoute.name),
+        TypedGoRoute<NewProfileRoute>(path: "profiles/new", name: NewProfileRoute.name),
+        TypedGoRoute<ProfileDetailsRoute>(path: "profiles/:id", name: ProfileDetailsRoute.name),
+        TypedGoRoute<ConfigOptionsRoute>(path: "config-options", name: ConfigOptionsRoute.name),
+        TypedGoRoute<QuickSettingsRoute>(path: "quick-settings", name: QuickSettingsRoute.name),
         TypedGoRoute<SettingsRoute>(
           path: "settings",
           name: SettingsRoute.name,
-          routes: [
-            TypedGoRoute<PerAppProxyRoute>(
-              path: "per-app-proxy",
-              name: PerAppProxyRoute.name,
-            ),
-          ],
+          routes: [TypedGoRoute<PerAppProxyRoute>(path: "per-app-proxy", name: PerAppProxyRoute.name)],
         ),
-        TypedGoRoute<LogsOverviewRoute>(
-          path: "logs",
-          name: LogsOverviewRoute.name,
-        ),
-        TypedGoRoute<AboutRoute>(
-          path: "about",
-          name: AboutRoute.name,
-        ),
+        TypedGoRoute<LogsOverviewRoute>(path: "logs", name: LogsOverviewRoute.name),
+        TypedGoRoute<AboutRoute>(path: "about", name: AboutRoute.name),
       ],
     ),
-    TypedGoRoute<ProxiesRoute>(
-      path: "/proxies",
-      name: ProxiesRoute.name,
-    ),
+    TypedGoRoute<ProxiesRoute>(path: "/proxies", name: ProxiesRoute.name),
   ],
 )
 class MobileWrapperRoute extends ShellRouteData {
@@ -92,49 +60,18 @@ class MobileWrapperRoute extends ShellRouteData {
       path: "/",
       name: HomeRoute.name,
       routes: [
-        TypedGoRoute<AddProfileRoute>(
-          path: "add",
-          name: AddProfileRoute.name,
-        ),
-        TypedGoRoute<ProfilesOverviewRoute>(
-          path: "profiles",
-          name: ProfilesOverviewRoute.name,
-        ),
-        TypedGoRoute<NewProfileRoute>(
-          path: "profiles/new",
-          name: NewProfileRoute.name,
-        ),
-        TypedGoRoute<ProfileDetailsRoute>(
-          path: "profiles/:id",
-          name: ProfileDetailsRoute.name,
-        ),
-        TypedGoRoute<QuickSettingsRoute>(
-          path: "quick-settings",
-          name: QuickSettingsRoute.name,
-        ),
+        TypedGoRoute<AddProfileRoute>(path: "add", name: AddProfileRoute.name),
+        TypedGoRoute<ProfilesOverviewRoute>(path: "profiles", name: ProfilesOverviewRoute.name),
+        TypedGoRoute<NewProfileRoute>(path: "profiles/new", name: NewProfileRoute.name),
+        TypedGoRoute<ProfileDetailsRoute>(path: "profiles/:id", name: ProfileDetailsRoute.name),
+        TypedGoRoute<QuickSettingsRoute>(path: "quick-settings", name: QuickSettingsRoute.name),
       ],
     ),
-    TypedGoRoute<ProxiesRoute>(
-      path: "/proxies",
-      name: ProxiesRoute.name,
-    ),
-    TypedGoRoute<ConfigOptionsRoute>(
-      path: "/config-options",
-      name: ConfigOptionsRoute.name,
-    ),
-    TypedGoRoute<SettingsRoute>(
-      path: "/settings",
-      name: SettingsRoute.name,
-      routes: [],
-    ),
-    TypedGoRoute<LogsOverviewRoute>(
-      path: "/logs",
-      name: LogsOverviewRoute.name,
-    ),
-    TypedGoRoute<AboutRoute>(
-      path: "/about",
-      name: AboutRoute.name,
-    ),
+    TypedGoRoute<ProxiesRoute>(path: "/proxies", name: ProxiesRoute.name),
+    TypedGoRoute<ConfigOptionsRoute>(path: "/config-options", name: ConfigOptionsRoute.name),
+    TypedGoRoute<SettingsRoute>(path: "/settings", name: SettingsRoute.name, routes: []),
+    TypedGoRoute<LogsOverviewRoute>(path: "/logs", name: LogsOverviewRoute.name),
+    TypedGoRoute<AboutRoute>(path: "/about", name: AboutRoute.name),
   ],
 )
 class DesktopWrapperRoute extends ShellRouteData {
@@ -153,11 +90,7 @@ class IntroRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return MaterialPage(
-      fullscreenDialog: true,
-      name: name,
-      child: IntroPage(),
-    );
+    return MaterialPage(fullscreenDialog: true, name: name, child: IntroPage());
   }
 }
 
@@ -167,10 +100,7 @@ class HomeRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return const NoTransitionPage(
-      name: name,
-      child: HomePage(),
-    );
+    return const NoTransitionPage(name: name, child: HomePage());
   }
 }
 
@@ -180,10 +110,7 @@ class ProxiesRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return const NoTransitionPage(
-      name: name,
-      child: ProxiesOverviewPage(),
-    );
+    return const NoTransitionPage(name: name, child: ProxiesOverviewPage());
   }
 }
 
@@ -201,10 +128,7 @@ class AddProfileRoute extends GoRouteData {
     return BottomSheetPage(
       fixed: true,
       name: name,
-      builder: (controller) => AddProfileModal(
-        url: url,
-        scrollController: controller,
-      ),
+      builder: (controller) => AddProfileModal(url: url, scrollController: controller),
     );
   }
 }
@@ -232,11 +156,7 @@ class NewProfileRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return const MaterialPage(
-      fullscreenDialog: true,
-      name: name,
-      child: ProfileDetailsPage("new"),
-    );
+    return const MaterialPage(fullscreenDialog: true, name: name, child: ProfileDetailsPage("new"));
   }
 }
 
@@ -249,11 +169,7 @@ class ProfileDetailsRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return MaterialPage(
-      fullscreenDialog: true,
-      name: name,
-      child: ProfileDetailsPage(id),
-    );
+    return MaterialPage(fullscreenDialog: true, name: name, child: ProfileDetailsPage(id));
   }
 }
 
@@ -266,10 +182,7 @@ class LogsOverviewRoute extends GoRouteData {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
     if (useMobileRouter) {
-      return const MaterialPage(
-        name: name,
-        child: LogsOverviewPage(),
-      );
+      return const MaterialPage(name: name, child: LogsOverviewPage());
     }
     return const NoTransitionPage(name: name, child: LogsOverviewPage());
   }
@@ -283,11 +196,7 @@ class QuickSettingsRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return BottomSheetPage(
-      fixed: true,
-      name: name,
-      builder: (controller) => const QuickSettingsModal(),
-    );
+    return BottomSheetPage(fixed: true, name: name, builder: (controller) => const QuickSettingsModal());
   }
 }
 
@@ -300,10 +209,7 @@ class SettingsRoute extends GoRouteData {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
     if (useMobileRouter) {
-      return const MaterialPage(
-        name: name,
-        child: SettingsOverviewPage(),
-      );
+      return const MaterialPage(name: name, child: SettingsOverviewPage());
     }
     return const NoTransitionPage(name: name, child: SettingsOverviewPage());
   }
@@ -339,11 +245,7 @@ class PerAppProxyRoute extends GoRouteData {
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
-    return const MaterialPage(
-      fullscreenDialog: true,
-      name: name,
-      child: PerAppProxyPage(),
-    );
+    return const MaterialPage(fullscreenDialog: true, name: name, child: PerAppProxyPage());
   }
 }
 
@@ -356,10 +258,7 @@ class AboutRoute extends GoRouteData {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) {
     if (useMobileRouter) {
-      return const MaterialPage(
-        name: name,
-        child: AboutPage(),
-      );
+      return const MaterialPage(name: name, child: AboutPage());
     }
     return const NoTransitionPage(name: name, child: AboutPage());
   }
