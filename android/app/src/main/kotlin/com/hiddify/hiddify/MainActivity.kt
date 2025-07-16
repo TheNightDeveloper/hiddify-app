@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.LinkedList
+import id.laskarmedia.openvpn_flutter.OpenVPNFlutterPlugin;
 
 
 class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
@@ -38,7 +39,7 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
     val logList = LinkedList<String>()
     var logCallback: ((Boolean) -> Unit)? = null
     val serviceStatus = MutableLiveData(Status.Stopped)
-    val serviceAlerts = MutableLiveData<ServiceEvent?>(null)
+    val serviceAlerts = MutableLiveData<ServiceEvent>()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -146,15 +147,34 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == VPN_PERMISSION_REQUEST_CODE) {
+     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        // برای پلاگین OpenVPN
+        if (requestCode == 24) {
+            OpenVPNFlutterPlugin.connectWhileGranted(resultCode == RESULT_OK)
+        }
+        // برای دسترسی VPN یا اعلان‌ها
+        else if (requestCode == VPN_PERMISSION_REQUEST_CODE) {
             if (resultCode == RESULT_OK) startService()
             else onServiceAlert(Alert.RequestVPNPermission, null)
         } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
             if (resultCode == RESULT_OK) startService()
             else onServiceAlert(Alert.RequestNotificationPermission, null)
         }
+        
+        super.onActivityResult(requestCode, resultCode, data)
     }
+// openVpn Method
+      //  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+      //  OpenVPNFlutterPlugin.connectWhileGranted(requestCode == 24 && resultCode == RESULT_OK)
+     //   super.onActivityResult(requestCode, resultCode, data)
+  //  }
+  //  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+   //     super.onActivityResult(requestCode, resultCode, data)
+   //     if (requestCode == VPN_PERMISSION_REQUEST_CODE) {
+      //      if (resultCode == RESULT_OK) startService()
+      //      else onServiceAlert(Alert.RequestVPNPermission, null)
+      //  } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
+      //      if (resultCode == RESULT_OK) startService()
+       // }
+    //}
 }

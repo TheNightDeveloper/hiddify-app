@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:fpdart/fpdart.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
 import 'package:hiddify/core/preferences/general_preferences.dart';
+import 'package:hiddify/features/config/model/config_models.dart';
+import 'package:hiddify/features/config/notifier/selected_config_notifier.dart';
 import 'package:hiddify/features/connection/data/connection_data_providers.dart';
 import 'package:hiddify/features/connection/data/connection_repository.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
-import 'package:hiddify/features/profile/model/profile_entity.dart';
-import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
+import 'package:hiddify/features/open_vpn/service/openvpn_service.dart';
+import 'package:hiddify/features/open_vpn/service/openvpn_status_mapper.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,42 +22,41 @@ part 'connection_notifier.g.dart';
 @Riverpod(keepAlive: true)
 class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   @override
-  Stream<ConnectionStatus> build() async* {
+  Stream<ConnectionStatus> build() {
     if (Platform.isIOS) {
-      await _connectionRepo.setup().mapLeft((l) {
+      _connectionRepo.setup().getOrElse((l) {
         loggy.error("error setting up connection repository", l);
+        return unit;
       }).run();
     }
 
-    ref.listenSelf(
-      (previous, next) async {
-        if (previous == next) return;
-        if (previous case AsyncData(:final value) when !value.isConnected) {
-          if (next case AsyncData(value: final Connected _)) {
-            await ref.read(hapticServiceProvider.notifier).heavyImpact();
+    ref.listenSelf((previous, next) async {
+      if (previous == next) return;
+      if (previous case AsyncData(:final value) when !value.isConnected) {
+        if (next case AsyncData(value: final Connected _)) {
+          await ref.read(hapticServiceProvider.notifier).heavyImpact();
 
-            if (Platform.isAndroid && !ref.read(Preferences.storeReviewedByUser)) {
-              if (await InAppReview.instance.isAvailable()) {
-                InAppReview.instance.requestReview();
-                ref.read(Preferences.storeReviewedByUser.notifier).update(true);
-              }
+          if (Platform.isAndroid && !ref.read(Preferences.storeReviewedByUser)) {
+            if (await InAppReview.instance.isAvailable()) {
+              InAppReview.instance.requestReview();
+              ref.read(Preferences.storeReviewedByUser.notifier).update(true);
             }
           }
         }
-      },
-    );
+      }
+    });
 
-    ref.listen(
-      activeProfileProvider.select((value) => value.asData?.value),
-      (previous, next) async {
-        if (previous == null) return;
-        final shouldReconnect = next == null || previous.id != next.id;
-        if (shouldReconnect) {
-          await reconnect(next);
-        }
-      },
-    );
-    yield* _connectionRepo.watchConnectionStatus().doOnData((event) {
+    ref.listen(selectedConfigNotifierProvider, (previous, next) async {
+      if (previous == null) return;
+      final shouldReconnect = next == null || previous.id != next.id;
+      if (shouldReconnect && state.value is Connected) {
+        await reconnect(next);
+      }
+    });
+
+    final openvpnEvents = _openVpnService.stage.map((event) => event.$1.toConnectionStatus(event.$2));
+
+    return MergeStream([_connectionRepo.watchConnectionStatus(), openvpnEvents]).doOnData((event) {
       if (event case Disconnected(connectionFailure: final _?) when PlatformUtils.isDesktop) {
         ref.read(Preferences.startedByUser.notifier).update(false);
       }
@@ -62,6 +65,7 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   ConnectionRepository get _connectionRepo => ref.read(connectionRepositoryProvider);
+  OpenVpnService get _openVpnService => ref.read(openVpnServiceProvider.notifier);
 
   Future<void> mayConnect() async {
     if (state case AsyncData(:final value)) {
@@ -90,25 +94,31 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
     }
   }
 
-  Future<void> reconnect(ProfileEntity? profile) async {
+  Future<void> reconnect(ServerConfig? config) async {
     if (state case AsyncData(:final value) when value == const Connected()) {
-      if (profile == null) {
-        loggy.info("no active profile, disconnecting");
+      if (config == null) {
+        loggy.info("no selected config, disconnecting");
         return _disconnect();
       }
-      loggy.info("active profile changed, reconnecting");
+      loggy.info("selected config changed, reconnecting");
       await ref.read(Preferences.startedByUser.notifier).update(true);
-      await _connectionRepo
-          .reconnect(
-        profile.id,
-        profile.name,
-        ref.read(Preferences.disableMemoryLimit),
-        profile.testUrl,
-      )
-          .mapLeft((err) {
-        loggy.warning("error reconnecting", err);
-        state = AsyncError(err, StackTrace.current);
-      }).run();
+
+      if (config.type == ConfigType.openvpn) {
+        await _openVpnService.disconnect();
+        await _openVpnService.connect(config);
+      } else {
+        await _connectionRepo
+            .reconnect(
+              config,
+              ref.read(Preferences.disableMemoryLimit),
+              "https://www.gstatic.com/generate_204", // Default test URL
+            )
+            .mapLeft((err) {
+              loggy.warning("error reconnecting", err);
+              state = AsyncError(err, StackTrace.current);
+            })
+            .run();
+      }
     }
   }
 
@@ -124,41 +134,47 @@ class ConnectionNotifier extends _$ConnectionNotifier with AppLogger {
   }
 
   Future<void> _connect() async {
-    final activeProfile = await ref.read(activeProfileProvider.future);
-    if (activeProfile == null) {
-      loggy.info("no active profile, not connecting");
+    final selectedConfig = ref.read(selectedConfigNotifierProvider);
+    if (selectedConfig == null) {
+      loggy.info("no selected config, not connecting");
       return;
     }
-    await _connectionRepo
-        .connect(
-      activeProfile.id,
-      activeProfile.name,
-      ref.read(Preferences.disableMemoryLimit),
-      activeProfile.testUrl,
-    )
-        .mapLeft((err) async {
-      loggy.warning("error connecting", err);
-      //Go err is not normal object to see the go errors are string and need to be dumped
-      loggy.warning(err);
-      if (err.toString().contains("panic")) {
-        await Sentry.captureException(Exception(err.toString()));
-      }
-      await ref.read(Preferences.startedByUser.notifier).update(false);
-      state = AsyncError(err, StackTrace.current);
-    }).run();
+
+    if (selectedConfig.type == ConfigType.openvpn) {
+      await _openVpnService.connect(selectedConfig);
+    } else {
+      await _connectionRepo
+          .connect(
+            selectedConfig,
+            ref.read(Preferences.disableMemoryLimit),
+            "https://www.gstatic.com/generate_204", // Default test URL
+          )
+          .mapLeft((err) async {
+            loggy.warning("error connecting", err);
+            //Go err is not normal object to see the go errors are string and need to be dumped
+            loggy.warning(err);
+            if (err.toString().contains("panic")) {
+              await Sentry.captureException(Exception(err.toString()));
+            }
+            await ref.read(Preferences.startedByUser.notifier).update(false);
+            state = AsyncError(err, StackTrace.current);
+          })
+          .run();
+    }
   }
 
   Future<void> _disconnect() async {
-    await _connectionRepo.disconnect().mapLeft((err) {
-      loggy.warning("error disconnecting", err);
-      state = AsyncError(err, StackTrace.current);
-    }).run();
+    final selectedConfig = ref.read(selectedConfigNotifierProvider);
+    if (selectedConfig?.type == ConfigType.openvpn) {
+      await _openVpnService.disconnect();
+    } else {
+      await _connectionRepo.disconnect().mapLeft((err) {
+        loggy.warning("error disconnecting", err);
+        state = AsyncError(err, StackTrace.current);
+      }).run();
+    }
   }
 }
 
 @Riverpod(keepAlive: true)
-Future<bool> serviceRunning(ServiceRunningRef ref) => ref
-    .watch(
-      connectionNotifierProvider.selectAsync((data) => data.isConnected),
-    )
-    .onError((error, stackTrace) => false);
+Future<bool> serviceRunning(ServiceRunningRef ref) => ref.watch(connectionNotifierProvider.selectAsync((data) => data.isConnected)).onError((error, stackTrace) => false);

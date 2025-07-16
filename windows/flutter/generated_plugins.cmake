@@ -7,7 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_timezone
   permission_handler_windows
   protocol_handler_windows
-  screen_retriever
+  screen_retriever_windows
   sentry_flutter
   share_plus
   sqlite3_flutter_libs

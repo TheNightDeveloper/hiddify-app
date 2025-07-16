@@ -42,10 +42,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
               child: SizedBox(
                 width: 224,
                 height: 224,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Assets.images.logo.svg(),
-                ),
+                child: Padding(padding: const EdgeInsets.all(24), child: Assets.images.logo.svg()),
               ),
             ),
             SliverCrossAxisConstrained(
@@ -67,9 +64,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                           style: const TextStyle(color: Colors.blue),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () async {
-                              await UriUtils.tryLaunch(
-                                Uri.parse(Constants.termsAndConditionsUrl),
-                              );
+                              await UriUtils.tryLaunch(Uri.parse(Constants.termsAndConditionsUrl));
                             },
                         ),
                       ),
@@ -77,10 +72,7 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 24,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                     child: FilledButton(
                       onPressed: () async {
                         if (isStarting.value) return;
@@ -90,21 +82,12 @@ class IntroPage extends HookConsumerWidget with PresLogger {
                           try {
                             await ref.read(analyticsControllerProvider.notifier).disableAnalytics();
                           } catch (error, stackTrace) {
-                            loggy.error(
-                              "could not disable analytics",
-                              error,
-                              stackTrace,
-                            );
+                            loggy.error("could not disable analytics", error, stackTrace);
                           }
                         }
                         await ref.read(Preferences.introCompleted.notifier).update(true);
                       },
-                      child: isStarting.value
-                          ? LinearProgressIndicator(
-                              backgroundColor: Colors.transparent,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            )
-                          : Text(t.intro.start),
+                      child: isStarting.value ? LinearProgressIndicator(backgroundColor: Colors.transparent, color: Theme.of(context).colorScheme.onSurface) : Text(t.intro.start),
                     ),
                   ),
                 ],
@@ -120,35 +103,24 @@ class IntroPage extends HookConsumerWidget with PresLogger {
     try {
       final countryCode = await TimeZoneToCountry.getLocalCountryCode();
       final regionLocale = _getRegionLocale(countryCode);
-      loggy.debug(
-        'Timezone Region: ${regionLocale.region} Locale: ${regionLocale.locale}',
-      );
+      loggy.debug('Timezone Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
       await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
       await ref.watch(ConfigOptions.directDnsAddress.notifier).reset();
       await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
       return;
     } catch (e) {
-      loggy.warning(
-        'Could not get the local country code based on timezone',
-        e,
-      );
+      loggy.warning('Could not get the local country code based on timezone', e);
     }
 
     try {
-      final DioHttpClient client = DioHttpClient(
-        timeout: const Duration(seconds: 2),
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-        debug: true,
-      );
+      final DioHttpClient client = DioHttpClient(timeout: const Duration(seconds: 2), userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0", debug: true, ref: ref as Ref<Object?>);
       final response = await client.get<Map<String, dynamic>>('https://api.ip.sb/geoip/');
 
       if (response.statusCode == 200) {
         final jsonData = response.data!;
         final regionLocale = _getRegionLocale(jsonData['country_code']?.toString() ?? "");
 
-        loggy.debug(
-          'Region: ${regionLocale.region} Locale: ${regionLocale.locale}',
-        );
+        loggy.debug('Region: ${regionLocale.region} Locale: ${regionLocale.locale}');
         await ref.read(ConfigOptions.region.notifier).update(regionLocale.region);
         await ref.read(localePreferencesProvider.notifier).changeLocale(regionLocale.locale);
       } else {

@@ -33,6 +33,11 @@
     "emptyProfilesMsg": "Begin by Adding a Subscription Profile",
     "noActiveProfileMsg": "Choose a Profile"
   },
+  "auth": {
+    "login": "Login",
+    "username": "Username",
+    "password": "Password"
+  },
   "stats": {
     "traffic": "Traffic",
     "trafficLive": "Live Traffic",

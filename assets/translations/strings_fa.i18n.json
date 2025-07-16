@@ -33,6 +33,11 @@
     "emptyProfilesMsg": "با افزودن یک پروفایل اشتراک شروع کنید",
     "noActiveProfileMsg": "یک پروفایل انتخاب کنید"
   },
+  "auth": {
+    "login": "ورود",
+    "username": "نام کاربری",
+    "password": "رمز عبور"
+  },
   "stats": {
     "traffic": "مصرف",
     "trafficLive": "مصرف لحظه‌ای",

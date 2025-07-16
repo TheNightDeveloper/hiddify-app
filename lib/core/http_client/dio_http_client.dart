@@ -1,40 +1,45 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
-import 'package:flutter_loggy_dio/flutter_loggy_dio.dart';
+import 'package:hiddify/features/auth/notifier/auth_state_notifier.dart';
 import 'package:hiddify/utils/custom_loggers.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+class UnauthorizedInterceptor extends Interceptor {
+  UnauthorizedInterceptor(this.ref);
+  final Ref ref;
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401) {
+      ref.read(authStateNotifierProvider.notifier).logout();
+    }
+    super.onError(err, handler);
+  }
+}
 
 class DioHttpClient with InfraLogger {
   final Map<String, Dio> _dio = {};
-  DioHttpClient({
-    required Duration timeout,
-    required String userAgent,
-    required bool debug,
-  }) {
+  final CookieJar _cookieJar = CookieJar();
+  DioHttpClient({required Duration timeout, required String userAgent, required bool debug, required Ref ref}) {
     for (var mode in ["proxy", "direct", "both"]) {
-      _dio[mode] = Dio(
-        BaseOptions(
-          connectTimeout: timeout,
-          sendTimeout: timeout,
-          receiveTimeout: timeout,
-          headers: {"User-Agent": userAgent},
+      _dio[mode] = Dio(BaseOptions(connectTimeout: timeout, sendTimeout: timeout, receiveTimeout: timeout, headers: {"User-Agent": userAgent}));
+      _dio[mode]!.interceptors.add(
+        RetryInterceptor(
+          dio: _dio[mode]!,
+          retryDelays: [
+            const Duration(seconds: 1),
+            if (mode != "proxy") ...[const Duration(seconds: 2), const Duration(seconds: 3)],
+          ],
         ),
       );
-      _dio[mode]!.interceptors.add(
-            RetryInterceptor(
-              dio: _dio[mode]!,
-              retryDelays: [
-                const Duration(seconds: 1),
-                if (mode != "proxy") ...[
-                  const Duration(seconds: 2),
-                  const Duration(seconds: 3),
-                ]
-              ],
-            ),
-          );
+      _dio[mode]!.interceptors.add(CookieManager(_cookieJar));
+      _dio[mode]!.interceptors.add(UnauthorizedInterceptor(ref));
 
       _dio[mode]!.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
@@ -71,6 +76,11 @@ class DioHttpClient with InfraLogger {
   //     return false;
   //   }
   // }
+
+  Future<void> clearCookies() async {
+    await _cookieJar.deleteAll();
+  }
+
   Future<bool> isPortOpen(String host, int port, {Duration timeout = const Duration(seconds: 5)}) async {
     try {
       final socket = await Socket.connect(host, port, timeout: timeout);
@@ -88,18 +98,12 @@ class DioHttpClient with InfraLogger {
     loggy.debug("setting proxy port: [$port]");
   }
 
-  Future<Response<T>> get<T>(
-    String url, {
-    CancelToken? cancelToken,
-    String? userAgent,
-    ({String username, String password})? credentials,
-    bool proxyOnly = false,
-  }) async {
+  Future<Response<T>> get<T>(String url, {CancelToken? cancelToken, String? userAgent, ({String username, String password})? credentials, bool proxyOnly = false}) async {
     final mode = proxyOnly
         ? "proxy"
         : await isPortOpen("127.0.0.1", port)
-            ? "both"
-            : "direct";
+        ? "both"
+        : "direct";
     final dio = _dio[mode]!;
 
     return dio.get<T>(
@@ -109,37 +113,33 @@ class DioHttpClient with InfraLogger {
     );
   }
 
-  Future<Response> download(
-    String url,
-    String path, {
-    CancelToken? cancelToken,
-    String? userAgent,
-    ({String username, String password})? credentials,
-    bool proxyOnly = false,
-  }) async {
+  Future<Response<T>> post<T>(String url, {dynamic data, CancelToken? cancelToken, String? userAgent}) async {
+    const mode = "direct"; // Auth requests should not go through proxy
+    final dio = _dio[mode]!;
+    return dio.post<T>(
+      url,
+      data: data,
+      cancelToken: cancelToken,
+      options: _options(url, userAgent: userAgent),
+    );
+  }
+
+  Future<Response> download(String url, String path, {CancelToken? cancelToken, String? userAgent, ({String username, String password})? credentials, bool proxyOnly = false}) async {
     final mode = proxyOnly
         ? "proxy"
         : await isPortOpen("127.0.0.1", port)
-            ? "both"
-            : "direct";
+        ? "both"
+        : "direct";
     final dio = _dio[mode]!;
     return dio.download(
       url,
       path,
       cancelToken: cancelToken,
-      options: _options(
-        url,
-        userAgent: userAgent,
-        credentials: credentials,
-      ),
+      options: _options(url, userAgent: userAgent, credentials: credentials),
     );
   }
 
-  Options _options(
-    String url, {
-    String? userAgent,
-    ({String username, String password})? credentials,
-  }) {
+  Options _options(String url, {String? userAgent, ({String username, String password})? credentials}) {
     final uri = Uri.parse(url);
 
     String? userInfo;
@@ -154,13 +154,6 @@ class DioHttpClient with InfraLogger {
       basicAuth = "Basic ${base64.encode(utf8.encode(userInfo))}";
     }
 
-    return Options(
-      headers: {
-        if (userAgent != null) "User-Agent": userAgent,
-        if (basicAuth != null) "authorization": basicAuth,
-        // "Accept": "application/json",
-        // "Content-Type": "application/json",
-      },
-    );
+    return Options(headers: {if (userAgent != null) "User-Agent": userAgent, if (basicAuth != null) "authorization": basicAuth, "Accept": "application/json", "Content-Type": "application/json"});
   }
 }

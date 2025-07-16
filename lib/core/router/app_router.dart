@@ -12,22 +12,18 @@ part 'app_router.g.dart';
 
 bool _debugMobileRouter = false;
 
-final useMobileRouter =
-    !PlatformUtils.isDesktop || (kDebugMode && _debugMobileRouter);
+final useMobileRouter = !PlatformUtils.isDesktop || (kDebugMode && _debugMobileRouter);
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // TODO: test and improve handling of deep link
 @riverpod
 GoRouter router(RouterRef ref) {
   final notifier = ref.watch(routerListenableProvider.notifier);
-  final deepLink = ref.listen(
-    deepLinkNotifierProvider,
-    (_, next) async {
-      if (next case AsyncData(value: final link?)) {
-        await ref.state.push(AddProfileRoute(url: link.url).location);
-      }
-    },
-  );
+  final deepLink = ref.listen(deepLinkNotifierProvider, (_, next) async {
+    if (next case AsyncData(value: final link?)) {
+      await ref.state.push(AddProfileRoute(url: link.url).location);
+    }
+  });
   final initialLink = deepLink.read();
   String initialLocation = const HomeRoute().location;
   if (initialLink case AsyncData(value: final link?)) {
@@ -38,26 +34,14 @@ GoRouter router(RouterRef ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation,
     debugLogDiagnostics: true,
-    routes: [
-      if (useMobileRouter) $mobileWrapperRoute else $desktopWrapperRoute,
-      $introRoute,
-    ],
+    routes: [if (useMobileRouter) $mobileWrapperRoute else $desktopWrapperRoute, $introRoute, $loginRoute],
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    observers: [
-      SentryNavigatorObserver(),
-    ],
+    observers: [SentryNavigatorObserver()],
   );
 }
 
-final tabLocations = [
-  const HomeRoute().location,
-  const ProxiesRoute().location,
-  const ConfigOptionsRoute().location,
-  const SettingsRoute().location,
-  const LogsOverviewRoute().location,
-  const AboutRoute().location,
-];
+final tabLocations = [const HomeRoute().location, const ProxiesRoute().location, const ConfigOptionsRoute().location, const SettingsRoute().location, const LogsOverviewRoute().location, const AboutRoute().location];
 
 int getCurrentIndex(BuildContext context) {
   final String location = GoRouterState.of(context).uri.path;
@@ -77,15 +61,15 @@ void switchTab(int index, BuildContext context) {
 }
 
 @riverpod
-class RouterListenable extends _$RouterListenable
-    with AppLogger
-    implements Listenable {
+class RouterListenable extends _$RouterListenable with AppLogger implements Listenable {
   VoidCallback? _routerListener;
   bool _introCompleted = false;
+  bool _isAuthenticated = true; // TODO: replace with real auth check
 
   @override
   Future<void> build() async {
     _introCompleted = ref.watch(Preferences.introCompleted);
+    // TODO: check if user is authenticated and update _isAuthenticated
 
     ref.listenSelf((_, __) {
       if (state.isLoading) return;
@@ -94,16 +78,25 @@ class RouterListenable extends _$RouterListenable
     });
   }
 
-// ignore: avoid_build_context_in_providers
+  // ignore: avoid_build_context_in_providers
   String? redirect(BuildContext context, GoRouterState state) {
     // if (this.state.isLoading || this.state.hasError) return null;
 
     final isIntro = state.uri.path == const IntroRoute().location;
+    final isLogin = state.uri.path == const LoginRoute().location;
 
     if (!_introCompleted) {
       return const IntroRoute().location;
-    } else if (isIntro) {
-      return const HomeRoute().location;
+    }
+
+    if (isIntro) {
+      // after intro, if not authenticated, go to login
+      return _isAuthenticated ? const HomeRoute().location : const LoginRoute().location;
+    }
+
+    if (!_isAuthenticated && !isLogin) {
+      // if not authenticated and not on login page, redirect to login
+      return const LoginRoute().location;
     }
 
     return null;
